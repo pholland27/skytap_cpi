@@ -15,9 +15,7 @@ module Bosh::SkytapCloud
       @agent_properties = @options['agent'] || {}
       @skytap_properties = @options['skytap']
 
-      @client = HTTPClient.new
-      @client.send_timeout = 14400 # 4 hours
-      @client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE      
+      @client = Client(@skytap_properties['site'], @skytap_properties['username'], @skytap_properties['password'])
     end
 
     ##
