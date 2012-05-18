@@ -1,3 +1,4 @@
+require 'json'
 module Bosh::SkytapCloud
 
   class Cloud < Bosh::Cloud
@@ -16,6 +17,18 @@ module Bosh::SkytapCloud
       @skytap_properties = @options['skytap']
 
       @client = Client(@skytap_properties['site'], @skytap_properties['username'], @skytap_properties['password'])
+    end
+
+    def set_registry(entity_id, entity_type, registry)
+      # TODO: figure out how to convert registry dictionary to proper notes json
+      @client.post("/#{entity_type}/#{entity_id}/notes", body=>"")
+    end
+
+    def get_registry(entity_id)
+      ret = @client.get("/#{entity_type}/#{entity_id}/notes")
+      ret.body do |note|
+        return JSON.parse(note['text'][9..-1]) if note['text'][0..8] == 'BOSHREG:'
+      end
     end
 
     ##
@@ -76,7 +89,17 @@ module Bosh::SkytapCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool,
                   networks, disk_locality = nil, env = nil)
-      not_implemented(:create_vm)
+      with_thread_name("create_vm(#{agent_id}, ...)") do
+        
+        configuration_id = resource_pool['cloud_properties']['configuration_id']
+
+        if configuration_id.nil? do
+            ret = @client.post("/configurations", {:template_id => stemcell_id})
+            resource_pool['cloud_properties']['configuration_id'] = ret.body['configuration_id']
+        else
+            @client.post("/configurations/#{configuration_id}", {:template_id => stemcell_id})
+        end
+      end
     end
 
     ##
